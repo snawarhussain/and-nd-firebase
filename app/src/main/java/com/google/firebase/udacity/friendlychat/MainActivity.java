@@ -16,6 +16,8 @@
 package com.google.firebase.udacity.friendlychat;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -30,31 +32,45 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.ArrayList;
+
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-
     public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
-
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
     private ProgressBar mProgressBar;
     private ImageButton mPhotoPickerButton;
     private EditText mMessageEditText;
     private Button mSendButton;
-
     private String mUsername;
-
+    private FirebaseDatabase mFirebaseDatabse;
+    private DatabaseReference mDatabaseReference;
+    private DatabaseReference mReferenceToData;
+    private ChildEventListener mChildEventListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         mUsername = ANONYMOUS;
+
+        mFirebaseDatabse = FirebaseDatabase.getInstance();
+       // mDatabaseReference = mFirebaseDatabse.getReference().child("messages");
+            mDatabaseReference = mFirebaseDatabse.getReference().child("Milking_Session");
+
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
@@ -64,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         mSendButton = (Button) findViewById(R.id.sendButton);
 
         // Initialize message ListView and its adapter
-        List<FriendlyMessage> friendlyMessages = new ArrayList<>();
+        final List<FriendlyMessage> friendlyMessages = new ArrayList<>();
         mMessageAdapter = new MessageAdapter(this, R.layout.item_message, friendlyMessages);
         mMessageListView.setAdapter(mMessageAdapter);
 
@@ -106,10 +122,56 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 // TODO: Send messages on click
 
+              //  FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
+               //========================================================
+
+                Date start_time = Calendar.getInstance().getTime();
+                double Litters = 0.0;
+
+               //==============================================================
+
+                MilkingSession milkingSession = new MilkingSession(start_time,null,Litters);
+                String key =  mDatabaseReference.push().getKey();
+                mDatabaseReference.child(key).setValue(milkingSession);
+                mReferenceToData = mDatabaseReference.child(key).child("Data");
+                String data_key = mReferenceToData.push().getKey();
+                mReferenceToData.child(data_key).setValue(3);
+
+
+                //================================================================
                 // Clear input box
                 mMessageEditText.setText("");
             }
         });
+    mChildEventListener = new ChildEventListener() {
+        @Override
+        public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+
+         FriendlyMessage mess =   dataSnapshot.getValue(FriendlyMessage.class);
+         mMessageAdapter.add(mess);
+        }
+
+        @Override
+        public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+
+        }
+
+        @Override
+        public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
+
+        }
+
+        @Override
+        public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+
+        }
+
+        @Override
+        public void onCancelled(@NonNull DatabaseError databaseError) {
+
+        }
+    };
+    mDatabaseReference.addChildEventListener(mChildEventListener);
     }
 
     @Override
